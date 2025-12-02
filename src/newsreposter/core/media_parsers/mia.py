@@ -1,0 +1,36 @@
+from collections import defaultdict
+from typing import List
+from urllib.parse import urljoin
+
+from bs4 import BeautifulSoup
+
+
+def parse(soup: BeautifulSoup, link: str) -> defaultdict[str, List[str]]:
+    media_links = defaultdict(list)
+
+    article = soup.find("div", class_="left-column")
+    if not article:
+        return media_links
+
+    for img_tag in article.find_all("img"):
+        src = img_tag.get("data-src") or img_tag.get("src")
+        if src and "ajax-loader.gif" not in src:
+            absolute_src = urljoin(link, str(src))
+            media_links["photo"].append(absolute_src)
+
+    for video_tag in article.find_all("iframe"):
+        src = video_tag.get("src")
+        if src and "ajax-loader.gif" not in src:
+            absolute_src = urljoin(
+                link, str(src).replace("files/embed/", "files/video/")
+            )
+            media_links["video"].append(absolute_src)
+        for source_tag in video_tag.find_all("source"):
+            src = source_tag.get("src")
+            if src and "ajax-loader.gif" not in src:
+                absolute_src = urljoin(
+                    link, str(src).replace("files/embed/", "files/video/")
+                )
+                media_links["video"].append(absolute_src)
+
+    return media_links
