@@ -15,7 +15,7 @@ def get_recent_items(
 ) -> List[Dict[str, Union[str, int]]]:
     logger.debug("Fetching recent items from Interfax: {} ms", milliseconds)
 
-    resp = requests.get(url, timeout=10)
+    resp = requests.get(url, timeout=30)
     resp.raise_for_status()
     logger.debug("Successfully fetched Interfax page")
 

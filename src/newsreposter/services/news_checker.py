@@ -146,9 +146,7 @@ class NewsChecker:
                         site,
                     )
                 else:
-                    logger.error(
-                        f"Parser failed for site {site}: {e}"
-                    )
+                    logger.error(f"Parser failed for site {site}: {e}")
                 self.state["index"] = (self.state["index"] + 1) % len(self.site_names)
                 self._save_state()
                 return
@@ -162,10 +160,6 @@ class NewsChecker:
                         allowed = await asyncio.to_thread(
                             process_news.process_news, text=it["title"]
                         )
-                        if not allowed[0] and "description" in it and it["description"]:
-                            allowed = await asyncio.to_thread(
-                                process_news.process_news, text=it["description"]
-                            )
                         if allowed[0]:
                             enqueued += 1
                             self.queue.enqueue(it)

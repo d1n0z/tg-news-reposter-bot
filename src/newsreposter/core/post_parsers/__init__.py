@@ -1,31 +1,40 @@
 import importlib
 import re
-from typing import Dict, Optional
+from functools import partial
+from typing import Dict, List, Optional
 
 import requests
 import urllib3
+from bs4 import Tag
 from loguru import logger
 from playwright.sync_api import sync_playwright
 
 from newsreposter.services.parsers import BeautifulSoup
 
+CUSTOM_PARSERS = {"мвд": "mia"}
+ALLOWED_TAGS = {"b", "strong", "i", "em", "code", "a", "u", "s", "strike", "del", "pre"}
 
-def route(link: str) -> Optional[Dict]:
+
+def route(link: str) -> Optional[partial[Optional[Dict[str, List[str]]]]]:
     match = re.search(r"https?://(?:www\.)?([^.]+)\.", link)
     if not match:
-        return {}
+        return
+    parser = match.group(1)
     parser_module = importlib.import_module(
-        f"newsreposter.core.media_parsers.{match.group(1)}"
+        f"newsreposter.core.post_parsers.{CUSTOM_PARSERS.get(parser, parser)}"
     )
     html = get_rendered_html(link)
     if not html:
-        return {}
-    return parser_module.parse(BeautifulSoup(html, "html.parser"), link) or {}
+        return
+    return partial(parser_module.parse, BeautifulSoup(html, "html.parser"), link)
 
 
-def parse(url: str) -> Dict:
+def parse(url: str) -> Dict[str, List[str]]:
     try:
-        return route(url) or {}
+        _parse = route(url)
+        if not _parse:
+            return {}
+        return _parse() or {}
     except Exception as e:
         logger.error(f'Error parsing url "{url}": {e}')
         return {}
@@ -39,9 +48,9 @@ def get_rendered_html(link: str):
         try:
             page.goto(link, timeout=50000)
         except Exception as e:
-            logger.error(f"Error loading page {link}: {e}")
+            logger.error(f"Error loading page dynamically ({link}): {e}")
             logger.info(
-                "Trying to load page with requests(verify=True then verify=False(some site has an issue with cert))..."
+                "Trying to load page with requests: verify=True and then verify=False(some site has an issue with cert))..."
             )
             for verify in (True, False):
                 if not verify:
@@ -72,3 +81,29 @@ def get_rendered_html(link: str):
 
         browser.close()
         return html
+
+
+def get_text(input_tag: Tag):
+    for img in input_tag.find_all({"img", "video"}):
+        img.decompose()
+
+    for tag in input_tag.find_all(ALLOWED_TAGS):
+        if tag.name == "a":
+            href = tag.get("href")
+            tag.attrs = {"href": href} if href else {}
+        elif tag.name == "pre":
+            lang = tag.get("language", tag.get("lang"))
+            tag.attrs = {"language": lang} if lang else {}
+        else:
+            tag.attrs = {}
+
+    for tag in input_tag.find_all():
+        if tag.name not in ALLOWED_TAGS:
+            tag.unwrap()
+
+    content = input_tag.decode_contents()
+    content = content.replace("<br/>", "\n").replace("<br>", "\n")
+    if input_tag.name.startswith("h") and len(input_tag.name) == 2:
+        content = "\n\n<b>" + content + "</b>\n\n"
+
+    return content
