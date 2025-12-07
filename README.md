@@ -1,4 +1,4 @@
-Install chromium for proper playwright work
+Install chromium for proper playwright work (`playwright install chromium-headless-shell`)
 
 ## License
 
