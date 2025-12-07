@@ -131,10 +131,3 @@ def get_recent_items(
 
     logger.debug("Interfax: found {} items", len(out))
     return out
-
-
-if __name__ == "__main__":
-    items = get_recent_items(30 * 60 * 1000 * 480)
-    print(len(items))
-    for i in items:
-        print(i)
