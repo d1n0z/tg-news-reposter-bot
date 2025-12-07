@@ -39,6 +39,7 @@ async def aiogram_post_item(
         photos = list(post_data.get("photo") or [])
         videos = list(post_data.get("video") or [])
         description = "\n".join(post_data.get("description") or [""])
+        logger.debug(f"Parsed description: {description}")
     else:
         logger.debug("Unknown media format or empty: {}", type(post_data))
 
@@ -56,6 +57,7 @@ async def aiogram_post_item(
     )
 
     if len(full_text) >= full_post_max_len:
+        logger.debug("Full text is too big, using title and link only")
         short_text = f"<b>{title}</b>\n\n{link}"
         to_send = short_text
         disable_preview = True
