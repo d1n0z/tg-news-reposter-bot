@@ -1,12 +1,12 @@
 import datetime
 from typing import Dict, List, Union
 
-import requests
 from loguru import logger
 
-from newsreposter.services.parsers import (
+from .. import (
     MOSCOW_TZ,
     clean_html,
+    get_rendered_page,
     parse_rss_items,
     parsed_pubdate,
 )
@@ -23,11 +23,12 @@ def get_recent_items(
     logger.debug("Cutoff time: {}", cutoff)
 
     out = []
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
+    content = get_rendered_page(url, "text_content")
+    if not content:
+        return out
     logger.debug("Successfully fetched RIA RSS")
 
-    items = parse_rss_items(response.content)
+    items = parse_rss_items(content)
     for item in items:
         pub = (
             item.findtext("pubDate")

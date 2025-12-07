@@ -1,11 +1,10 @@
 import datetime
 from typing import Dict, List, Union
 
-import requests
 from bs4 import BeautifulSoup
 from loguru import logger
 
-from newsreposter.services.parsers import MOSCOW_TZ, clean_html
+from .. import MOSCOW_TZ, clean_html, get_rendered_page
 
 INTERFAX_URL = "https://www.interfax-russia.ru/news"
 
@@ -14,14 +13,14 @@ def get_recent_items(
     milliseconds: int = 0, url: str = INTERFAX_URL
 ) -> List[Dict[str, Union[str, int]]]:
     logger.debug("Fetching recent items from Interfax: {} ms", milliseconds)
+    out: List[Dict[str, Union[str, int]]] = []
 
-    resp = requests.get(url, timeout=30)
-    resp.raise_for_status()
+    content = get_rendered_page(url)
+    if not content:
+        return out
     logger.debug("Successfully fetched Interfax page")
 
-    soup = BeautifulSoup(resp.content, "html.parser")
-
-    out: List[Dict[str, Union[str, int]]] = []
+    soup = BeautifulSoup(content, "html.parser")
 
     lista = soup.select_one("ul.lenta-all-news, ul.list-unstyled.lenta-all-news")
     if not lista:
@@ -42,8 +41,18 @@ def get_recent_items(
         return out
 
     ru_months = {
-        "января": 1, "февраля": 2, "марта": 3, "апреля": 4, "мая": 5, "июня": 6,
-        "июля": 7, "августа": 8, "сентября": 9, "октября": 10, "ноября": 11, "декабря": 12
+        "января": 1,
+        "февраля": 2,
+        "марта": 3,
+        "апреля": 4,
+        "мая": 5,
+        "июня": 6,
+        "июля": 7,
+        "августа": 8,
+        "сентября": 9,
+        "октября": 10,
+        "ноября": 11,
+        "декабря": 12,
     }
     parts = date_text.split()
     if len(parts) >= 2:
@@ -53,7 +62,9 @@ def get_recent_items(
             now = datetime.datetime.now()
             local_tz = now.astimezone().tzinfo
             try:
-                current_date = datetime.datetime(datetime.datetime.now(local_tz).year, month, day, tzinfo=local_tz)
+                current_date = datetime.datetime(
+                    datetime.datetime.now(local_tz).year, month, day, tzinfo=local_tz
+                )
             except Exception as e:
                 logger.debug("Failed to create date: {}", e)
                 return out
@@ -68,7 +79,9 @@ def get_recent_items(
         return out
 
     now_ms = int(now.astimezone(datetime.timezone.utc).timestamp() * 1000)
-    threshold_ms = now_ms - int(milliseconds) if milliseconds and milliseconds > 0 else None
+    threshold_ms = (
+        now_ms - int(milliseconds) if milliseconds and milliseconds > 0 else None
+    )
 
     for li in header_li.find_next_siblings("li"):
         if li.find("h2"):
@@ -87,7 +100,9 @@ def get_recent_items(
             continue
 
         try:
-            dt_msk = current_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            dt_msk = current_date.replace(
+                hour=hour, minute=minute, second=0, microsecond=0
+            )
         except Exception as e:
             logger.debug("Failed to create datetime: {}", e)
             continue

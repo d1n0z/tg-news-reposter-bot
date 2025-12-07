@@ -3,6 +3,7 @@ import json
 import os
 import pickle
 from datetime import datetime, timezone
+import re
 from typing import Any
 
 import torch
@@ -10,6 +11,8 @@ from loguru import logger
 from sentence_transformers import SentenceTransformer, util
 from torch import Tensor
 from transformers import logging as hf_logging
+
+logger = logger.bind(filter_logger=True)
 
 CACHE_FILE = "cache.pkl"
 MAX_CACHE_SIZE = 1000
@@ -121,6 +124,15 @@ def is_duplicate(text_embedding: Tensor) -> bool:
     return max_score >= SIMILARITY_THRESHOLD
 
 
+def find_keywords(text: str) -> list[str]:
+    found = []
+    for kw in KEYWORDS:
+        pattern = rf"\b{re.escape(kw.lower())}\b"
+        if re.search(pattern, text):
+            found.append(kw)
+    return found
+
+
 def process_news(text: str):
     global cache
     logger.debug("Processing news: {} chars", len(text))
@@ -128,23 +140,23 @@ def process_news(text: str):
     lower_text = text.lower()
     embedding = model.encode(text, show_progress_bar=False, convert_to_tensor=True)
 
-    kw_found = [kw for kw in KEYWORDS if kw in lower_text]
+    kw_found = find_keywords(lower_text)
     if not kw_found:
-        logger.debug("No keywords found in text, checking relevance")
+        logger.debug("No keywords found in text({}), checking relevance", text)
         relevance_scores = util.cos_sim(embedding, keyword_embeddings)[0]
         if (
             relevance := float(relevance_scores.max().cpu().item())
         ) < RELEVANCE_THRESHOLD:
             e = f"Text not relevant (text: {text}, score: {relevance:.4f})"
-            logger.bind(filter_logger=True).debug(e)
+            logger.debug(e)
             return False, e
-        logger.bind(filter_logger=True).debug(
+        logger.debug(
             f"Text not relevant (text: {text}, score: {relevance:.4f})"
         )
     else:
         relevance = None
-        logger.bind(filter_logger=True).debug(
-            "Keywords found in text ({}), skipping relevance check", ",".join(kw_found)
+        logger.debug(
+            "Keywords found in text ({}({})), skipping relevance check", text, ",".join(kw_found)
         )
 
     text_hash = get_text_hash(text)

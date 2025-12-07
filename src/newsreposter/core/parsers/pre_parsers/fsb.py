@@ -1,11 +1,10 @@
 import datetime
 from typing import Dict, List, Union
 
-import requests
 from bs4 import BeautifulSoup
 from loguru import logger
 
-from newsreposter.services.parsers import MOSCOW_TZ, clean_html
+from .. import MOSCOW_TZ, clean_html, get_rendered_page
 
 FSB_URL = "http://www.fsb.ru/fsb/press/message.htm"
 
@@ -14,21 +13,22 @@ def get_recent_items(
     milliseconds: int, url: str = FSB_URL
 ) -> List[Dict[str, Union[str, int]]]:
     logger.debug("Fetching recent items from FSB: {} ms", milliseconds)
-
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
-    logger.debug("Successfully fetched FSB page")
-
-    soup = BeautifulSoup(response.content, "html.parser")
-
     out: List[Dict[str, Union[str, int]]] = []
 
+    content = get_rendered_page(url)
+    if not content:
+        return out
+    logger.debug("Successfully fetched FSB page")
+
+    soup = BeautifulSoup(content, "html.parser")
     news = soup.select_one("div.news")
+    if news:
+        news = news.find("ul", recursive=False)
     if not news:
         logger.error("news div not found at fsb.ru")
         raise RuntimeError("news div not found at fsb.ru")
 
-    for row in news.find_all("li"):
+    for row in news.find_all("li", recursive=False):
         date_tag = row.find("h5", class_="date")
         if not date_tag:
             continue
@@ -51,6 +51,8 @@ def get_recent_items(
         link = str(a_tag.get("href", ""))
         if link.startswith("/"):
             link = "http://www.fsb.ru" + link
+        elif link.startswith("fsb"):
+            link = "http://www.fsb.ru/" + link
 
         logger.debug("Adding FSB item: {}", title)
         out.append(

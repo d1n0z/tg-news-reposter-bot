@@ -6,7 +6,7 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.types import InputMediaPhoto, InputMediaVideo
 from loguru import logger
 
-from newsreposter.core import post_parsers
+from newsreposter.core.parsers import post_parsers
 
 FULL_POST_MAX_LEN = 1024
 

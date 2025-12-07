@@ -1,13 +1,13 @@
 import datetime
 from typing import Dict, List, Union
 
-import requests
 from loguru import logger
 
-from newsreposter.services.parsers import (
+from .. import (
     MOSCOW_TZ,
-    find_by_localname,
     clean_html,
+    find_by_localname,
+    get_rendered_page,
     parse_rss_items,
     parsed_pubdate,
 )
@@ -24,11 +24,13 @@ def get_recent_items(
     logger.debug("Cutoff time: {}", cutoff)
 
     out: List[Dict[str, Union[str, int]]] = []
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
+
+    content = get_rendered_page(url, "text_content")
+    if not content:
+        return out
     logger.debug("Successfully fetched Sledcom RSS")
 
-    items = parse_rss_items(response.content)
+    items = parse_rss_items(content)
 
     for item in items:
         pub = (

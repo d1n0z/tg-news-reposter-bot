@@ -1,13 +1,12 @@
 import datetime
 from typing import Dict, List, Union
 
-import requests
-import urllib3
 from loguru import logger
 
-from newsreposter.services.parsers import (
+from .. import (
     MOSCOW_TZ,
     clean_html,
+    get_rendered_page,
     parse_rss_items,
     parsed_pubdate,
 )
@@ -25,17 +24,12 @@ def get_recent_items(
 
     out: List[Dict[str, Union[str, int]]] = []
 
-    urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
-    res = requests.get(
-        url,
-        timeout=10,
-        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
-        verify=False,
-    )
-    res.raise_for_status()
+    content = get_rendered_page(url, "text_content")
+    if not content:
+        return out
     logger.debug("Successfully fetched FEDS RSS")
 
-    items = parse_rss_items(res.content)
+    items = parse_rss_items(content)
     for it in items:
         pub = (
             it.findtext("pubDate")

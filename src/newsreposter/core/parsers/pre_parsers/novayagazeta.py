@@ -1,12 +1,12 @@
 import datetime
 from typing import Dict, List, Union
 
-import requests
 from loguru import logger
 
-from newsreposter.services.parsers import (
+from .. import (
     MOSCOW_TZ,
     clean_html,
+    get_rendered_page,
     parse_rss_items,
     parsed_pubdate,
 )
@@ -21,17 +21,13 @@ def get_recent_items(
     now_moscow = datetime.datetime.now(MOSCOW_TZ)
     cutoff = now_moscow - datetime.timedelta(milliseconds=milliseconds)
     logger.debug("Cutoff time: {}", cutoff)
-
     out = []
-    try:
-        res = requests.get(url, timeout=10)
-        res.raise_for_status()
-        logger.debug("Successfully fetched Novaya Gazeta RSS")
-    except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
-        # this service is known to be slow/refuse connection, just skip
+
+    content = get_rendered_page(url, "text_content")
+    if not content:
         return out
 
-    items = parse_rss_items(res.content)
+    items = parse_rss_items(content)
     for it in items:
         pub = (
             it.findtext("pubDate")

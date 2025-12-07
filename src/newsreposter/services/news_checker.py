@@ -4,7 +4,6 @@ import inspect
 import json
 import os
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict
 
 import requests
@@ -17,9 +16,7 @@ ROTATION_INTERVAL_SECONDS = 60
 OVERLAP_MS = 1000
 INITIAL_BACKFILL_MS = 60 * 60 * 1000
 STATE_FILE = "state.json"
-PARSERS_PACKAGE = str(
-    Path(__file__).parent.relative_to(Path(__file__).parent.parent.parent) / "parsers"
-).replace("\\", ".")
+PARSERS_PACKAGE = "newsreposter.core.parsers.pre_parsers"
 
 
 class NewsChecker:
@@ -55,7 +52,7 @@ class NewsChecker:
             if hasattr(mod, "get_recent_items"):
                 parsers[name] = mod.get_recent_items
                 logger.debug("Discovered parser: {}", name)
-        logger.debug("Found {} parsers", len(parsers))
+        logger.info("Found {} parsers", len(parsers))
         return parsers
 
     def _load_state(self) -> Dict[str, Any]:
