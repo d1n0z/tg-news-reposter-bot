@@ -25,7 +25,9 @@ def get_recent_items(
 
     content = get_rendered_page(url, "text_content")
     if not content:
+        logger.debug("Failed to fetch Novaya Gazeta page")
         return out
+    logger.debug("Successfuly fetched Novaya Gazeta page")
 
     items = parse_rss_items(content)
     for it in items:

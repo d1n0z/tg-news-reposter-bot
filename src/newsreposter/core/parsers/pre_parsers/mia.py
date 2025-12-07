@@ -27,6 +27,7 @@ def get_recent_items(
 
     content = get_rendered_page(url, "text_content")
     if not content:
+        logger.debug("Failed to fetch MIA RSS")
         return out
     logger.debug("Successfully fetched MIA RSS")
 

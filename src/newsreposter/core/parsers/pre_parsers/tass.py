@@ -25,6 +25,7 @@ def get_recent_items(
     out = []
     content = get_rendered_page(url, "text_content")
     if not content:
+        logger.debug("Failed to fetch TASS RSS")
         return out
     logger.debug("Successfully fetched TASS RSS")
 

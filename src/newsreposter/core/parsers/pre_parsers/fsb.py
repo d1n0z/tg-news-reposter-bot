@@ -17,6 +17,7 @@ def get_recent_items(
 
     content = get_rendered_page(url)
     if not content:
+        logger.debug("Failed to fetch FSB page")
         return out
     logger.debug("Successfully fetched FSB page")
 
